@@ -1,0 +1,16 @@
+.cb-wrap .form-table th {
+    width: 220px;
+}
+
+.cb-wrap .widefat td,
+.cb-wrap .widefat th {
+    vertical-align: top;
+}
+
+.cb-wrap .cb-add-form {
+    background: #fff;
+    padding: 1rem 1.25rem;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    max-width: 640px;
+}
