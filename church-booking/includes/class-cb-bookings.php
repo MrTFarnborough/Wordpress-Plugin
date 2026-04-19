@@ -128,7 +128,10 @@ class CB_Bookings {
             ? $data['status']
             : 'confirmed';
 
+        $room_id = isset( $data['room_id'] ) ? (int) $data['room_id'] : 0;
+
         return array(
+            'room_id'        => $room_id > 0 ? $room_id : null,
             'start_time'     => gmdate( 'Y-m-d H:i:s', $start ),
             'end_time'       => gmdate( 'Y-m-d H:i:s', $end ),
             'source'         => $source,

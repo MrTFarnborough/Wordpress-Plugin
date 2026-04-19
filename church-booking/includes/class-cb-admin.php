@@ -47,6 +47,15 @@ class CB_Admin {
 
         add_submenu_page(
             self::MENU_SLUG,
+            __( 'Rooms', 'church-booking' ),
+            __( 'Rooms', 'church-booking' ),
+            'manage_options',
+            self::MENU_SLUG . '-rooms',
+            array( $this, 'render_rooms_page' )
+        );
+
+        add_submenu_page(
+            self::MENU_SLUG,
             __( 'Import from Church', 'church-booking' ),
             __( 'Import', 'church-booking' ),
             'manage_options',
@@ -111,13 +120,28 @@ class CB_Admin {
                     'church-booking',
                     'import_ok',
                     sprintf(
-                        /* translators: %d number of imported bookings */
-                        __( 'Imported %d church bookings.', 'church-booking' ),
-                        $summary
+                        /* translators: 1: bookings imported, 2: rooms discovered */
+                        __( 'Imported %1$d church bookings and %2$d rooms.', 'church-booking' ),
+                        $summary['bookings'],
+                        $summary['rooms']
                     ),
                     'updated'
                 );
             }
+        }
+
+        if ( isset( $_POST['cb_action'] ) && 'save_rooms' === $_POST['cb_action'] ) {
+            check_admin_referer( 'cb_save_rooms' );
+            $rooms = isset( $_POST['rooms'] ) && is_array( $_POST['rooms'] ) ? wp_unslash( $_POST['rooms'] ) : array();
+            foreach ( $rooms as $id => $fields ) {
+                CB_Rooms::update(
+                    (int) $id,
+                    (string) ( $fields['room_type'] ?? '' ),
+                    (int) ( $fields['parent_room_id'] ?? 0 ),
+                    (float) ( $fields['price_per_hour'] ?? 0 )
+                );
+            }
+            add_settings_error( 'church-booking', 'rooms_ok', __( 'Rooms saved.', 'church-booking' ), 'updated' );
         }
     }
 
@@ -136,12 +160,18 @@ class CB_Admin {
         include CHURCH_BOOKING_PATH . 'templates/admin-import.php';
     }
 
+    public function render_rooms_page() {
+        $rooms       = CB_Rooms::all();
+        $hire_rooms  = CB_Rooms::hire_rooms();
+        include CHURCH_BOOKING_PATH . 'templates/admin-rooms.php';
+    }
+
     /**
-     * Minimal ICS importer: reads a church calendar feed and stores VEVENTs as
-     * blocked bookings.
+     * Minimal ICS importer: reads a church calendar feed, stores VEVENTs as
+     * blocked bookings, and upserts each LOCATION into the rooms table.
      *
      * @param string $url
-     * @return int|WP_Error Number of imported events or error.
+     * @return array|WP_Error { bookings: int, rooms: int } or error.
      */
     private function import_from_ics( $url ) {
         if ( empty( $url ) ) {
@@ -158,28 +188,42 @@ class CB_Admin {
             return new WP_Error( 'http_error', sprintf( __( 'Feed responded with HTTP %d.', 'church-booking' ), $code ) );
         }
 
-        $body   = wp_remote_retrieve_body( $response );
-        $events = $this->parse_ics( $body );
-        $count  = 0;
+        $body          = wp_remote_retrieve_body( $response );
+        $events        = $this->parse_ics( $body );
+        $booking_count = 0;
+        $seen_rooms    = array();
 
         foreach ( $events as $event ) {
+            $room_id = 0;
+            if ( ! empty( $event['location'] ) ) {
+                $room_id = CB_Rooms::upsert( $event['location'] );
+                if ( $room_id ) {
+                    $seen_rooms[ $room_id ] = true;
+                }
+            }
+
             $result = CB_Bookings::insert( array(
                 'start_time' => $event['start'],
                 'end_time'   => $event['end'],
                 'title'      => $event['summary'],
+                'room_id'    => $room_id,
                 'source'     => 'church',
                 'status'     => 'confirmed',
             ) );
             if ( ! is_wp_error( $result ) ) {
-                $count++;
+                $booking_count++;
             }
         }
 
-        return $count;
+        return array(
+            'bookings' => $booking_count,
+            'rooms'    => count( $seen_rooms ),
+        );
     }
 
     /**
-     * Parse a tiny subset of ICS: DTSTART/DTEND/SUMMARY inside VEVENT blocks.
+     * Parse a tiny subset of ICS: DTSTART/DTEND/SUMMARY/LOCATION inside
+     * VEVENT blocks.
      */
     private function parse_ics( $body ) {
         $lines   = preg_split( "/\r?\n/", (string) $body );
@@ -189,7 +233,7 @@ class CB_Admin {
         foreach ( $lines as $line ) {
             $line = trim( $line );
             if ( 'BEGIN:VEVENT' === $line ) {
-                $current = array( 'start' => '', 'end' => '', 'summary' => '' );
+                $current = array( 'start' => '', 'end' => '', 'summary' => '', 'location' => '' );
                 continue;
             }
             if ( 'END:VEVENT' === $line ) {
@@ -207,11 +251,17 @@ class CB_Admin {
             } elseif ( 0 === strpos( $line, 'DTEND' ) ) {
                 $current['end'] = $this->ics_datetime( $line );
             } elseif ( 0 === strpos( $line, 'SUMMARY' ) ) {
-                $current['summary'] = substr( $line, strpos( $line, ':' ) + 1 );
+                $current['summary'] = $this->ics_unescape( substr( $line, strpos( $line, ':' ) + 1 ) );
+            } elseif ( 0 === strpos( $line, 'LOCATION' ) ) {
+                $current['location'] = $this->ics_unescape( substr( $line, strpos( $line, ':' ) + 1 ) );
             }
         }
 
         return $events;
+    }
+
+    private function ics_unescape( $value ) {
+        return str_replace( array( '\\,', '\\;', '\\n', '\\N' ), array( ',', ';', "\n", "\n" ), (string) $value );
     }
 
     private function ics_datetime( $line ) {

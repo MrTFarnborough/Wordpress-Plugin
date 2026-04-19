@@ -10,6 +10,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 global $wpdb;
 
 delete_option( 'cb_settings' );
+delete_option( 'cb_db_version' );
 
-$table = $wpdb->prefix . 'cb_bookings';
-$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+$bookings = $wpdb->prefix . 'cb_bookings';
+$rooms    = $wpdb->prefix . 'cb_rooms';
+$wpdb->query( "DROP TABLE IF EXISTS {$bookings}" );
+$wpdb->query( "DROP TABLE IF EXISTS {$rooms}" );

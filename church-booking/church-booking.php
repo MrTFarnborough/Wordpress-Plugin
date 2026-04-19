@@ -20,6 +20,7 @@ define( 'CHURCH_BOOKING_URL', plugin_dir_url( __FILE__ ) );
 
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-install.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-settings.php';
+require_once CHURCH_BOOKING_PATH . 'includes/class-cb-rooms.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-bookings.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-slots.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-admin.php';
@@ -32,6 +33,8 @@ add_action( 'plugins_loaded', 'church_booking_bootstrap' );
 
 function church_booking_bootstrap() {
     load_plugin_textdomain( 'church-booking', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+
+    CB_Install::maybe_upgrade();
 
     if ( is_admin() ) {
         new CB_Admin();
