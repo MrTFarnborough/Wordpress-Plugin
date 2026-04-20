@@ -1,0 +1,145 @@
+.cb-booking {
+    font-family: inherit;
+    max-width: 640px;
+    margin: 1.5rem 0;
+}
+
+.cb-booking h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+}
+
+.cb-date-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.cb-date {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 120ms, box-shadow 120ms, background 120ms;
+}
+
+.cb-date:hover {
+    border-color: #98a2b3;
+}
+
+.cb-date.is-selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.cb-date__weekday {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #667085;
+}
+
+.cb-date__day {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.cb-date__month {
+    font-size: 0.75rem;
+    color: #667085;
+}
+
+.cb-step {
+    margin-top: 1.5rem;
+}
+
+.cb-slot-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.5rem;
+}
+
+.cb-slot {
+    padding: 0.55rem 0.8rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font: inherit;
+}
+
+.cb-slot:hover {
+    border-color: #2563eb;
+    color: #1d4ed8;
+}
+
+.cb-step--form label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.cb-step--form label span {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.cb-step--form input,
+.cb-step--form textarea {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.cb-chosen {
+    padding: 0.5rem 0.75rem;
+    background: #f2f4f7;
+    border-radius: 6px;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.cb-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.cb-submit,
+.cb-back {
+    padding: 0.55rem 1.1rem;
+    border-radius: 6px;
+    border: 1px solid #1d4ed8;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+}
+
+.cb-back {
+    background: #fff;
+    color: #1d4ed8;
+}
+
+.cb-message {
+    margin-top: 0.75rem;
+}
+
+.cb-message--ok {
+    padding: 0.75rem;
+    background: #ecfdf3;
+    border: 1px solid #a6f4c5;
+    color: #054f31;
+    border-radius: 6px;
+}
