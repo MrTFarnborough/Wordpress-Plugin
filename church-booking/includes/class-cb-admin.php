@@ -112,18 +112,22 @@ class CB_Admin {
         if ( isset( $_POST['cb_action'] ) && 'import_feed' === $_POST['cb_action'] ) {
             check_admin_referer( 'cb_import_feed' );
             $url     = esc_url_raw( wp_unslash( $_POST['feed_url'] ?? '' ) );
-            $summary = $this->import_from_ics( $url );
+            $summary = CB_ChurchSuite::import( $url );
             if ( is_wp_error( $summary ) ) {
                 add_settings_error( 'church-booking', 'import_err', $summary->get_error_message() );
             } else {
+                if ( $url && $url !== CB_Settings::get( 'church_feed_url' ) ) {
+                    CB_Settings::update( array( 'church_feed_url' => $url ) );
+                }
                 add_settings_error(
                     'church-booking',
                     'import_ok',
                     sprintf(
-                        /* translators: 1: bookings imported, 2: rooms discovered */
-                        __( 'Imported %1$d church bookings and %2$d rooms.', 'church-booking' ),
+                        /* translators: 1: bookings imported, 2: hire rooms, 3: additional rooms */
+                        __( 'Imported %1$d bookings, %2$d hire rooms and %3$d additional rooms.', 'church-booking' ),
                         $summary['bookings'],
-                        $summary['rooms']
+                        $summary['rooms'],
+                        $summary['additional_rooms']
                     ),
                     'updated'
                 );
@@ -166,107 +170,4 @@ class CB_Admin {
         include CHURCH_BOOKING_PATH . 'templates/admin-rooms.php';
     }
 
-    /**
-     * Minimal ICS importer: reads a church calendar feed, stores VEVENTs as
-     * blocked bookings, and upserts each LOCATION into the rooms table.
-     *
-     * @param string $url
-     * @return array|WP_Error { bookings: int, rooms: int } or error.
-     */
-    private function import_from_ics( $url ) {
-        if ( empty( $url ) ) {
-            return new WP_Error( 'no_url', __( 'Please provide a calendar feed URL.', 'church-booking' ) );
-        }
-
-        $response = wp_safe_remote_get( $url, array( 'timeout' => 20 ) );
-        if ( is_wp_error( $response ) ) {
-            return $response;
-        }
-
-        $code = wp_remote_retrieve_response_code( $response );
-        if ( 200 !== (int) $code ) {
-            return new WP_Error( 'http_error', sprintf( __( 'Feed responded with HTTP %d.', 'church-booking' ), $code ) );
-        }
-
-        $body          = wp_remote_retrieve_body( $response );
-        $events        = $this->parse_ics( $body );
-        $booking_count = 0;
-        $seen_rooms    = array();
-
-        foreach ( $events as $event ) {
-            $room_id = 0;
-            if ( ! empty( $event['location'] ) ) {
-                $room_id = CB_Rooms::upsert( $event['location'] );
-                if ( $room_id ) {
-                    $seen_rooms[ $room_id ] = true;
-                }
-            }
-
-            $result = CB_Bookings::insert( array(
-                'start_time' => $event['start'],
-                'end_time'   => $event['end'],
-                'title'      => $event['summary'],
-                'room_id'    => $room_id,
-                'source'     => 'church',
-                'status'     => 'confirmed',
-            ) );
-            if ( ! is_wp_error( $result ) ) {
-                $booking_count++;
-            }
-        }
-
-        return array(
-            'bookings' => $booking_count,
-            'rooms'    => count( $seen_rooms ),
-        );
-    }
-
-    /**
-     * Parse a tiny subset of ICS: DTSTART/DTEND/SUMMARY/LOCATION inside
-     * VEVENT blocks.
-     */
-    private function parse_ics( $body ) {
-        $lines   = preg_split( "/\r?\n/", (string) $body );
-        $events  = array();
-        $current = null;
-
-        foreach ( $lines as $line ) {
-            $line = trim( $line );
-            if ( 'BEGIN:VEVENT' === $line ) {
-                $current = array( 'start' => '', 'end' => '', 'summary' => '', 'location' => '' );
-                continue;
-            }
-            if ( 'END:VEVENT' === $line ) {
-                if ( $current && $current['start'] && $current['end'] ) {
-                    $events[] = $current;
-                }
-                $current = null;
-                continue;
-            }
-            if ( null === $current ) {
-                continue;
-            }
-            if ( 0 === strpos( $line, 'DTSTART' ) ) {
-                $current['start'] = $this->ics_datetime( $line );
-            } elseif ( 0 === strpos( $line, 'DTEND' ) ) {
-                $current['end'] = $this->ics_datetime( $line );
-            } elseif ( 0 === strpos( $line, 'SUMMARY' ) ) {
-                $current['summary'] = $this->ics_unescape( substr( $line, strpos( $line, ':' ) + 1 ) );
-            } elseif ( 0 === strpos( $line, 'LOCATION' ) ) {
-                $current['location'] = $this->ics_unescape( substr( $line, strpos( $line, ':' ) + 1 ) );
-            }
-        }
-
-        return $events;
-    }
-
-    private function ics_unescape( $value ) {
-        return str_replace( array( '\\,', '\\;', '\\n', '\\N' ), array( ',', ';', "\n", "\n" ), (string) $value );
-    }
-
-    private function ics_datetime( $line ) {
-        $value = substr( $line, strpos( $line, ':' ) + 1 );
-        $ts    = strtotime( $value );
-        return $ts ? gmdate( 'Y-m-d H:i:s', $ts ) : '';
-    }
 }

@@ -16,9 +16,10 @@ class CB_Rooms {
 
     /**
      * Create the room if it doesn't exist (by external id, then by name) and
-     * return its row id.
+     * return its row id. Existing rows are not re-classified; the type/parent
+     * defaults only apply on initial insert.
      */
-    public static function upsert( $name, $external_id = '' ) {
+    public static function upsert( $name, $external_id = '', $room_type = self::TYPE_HIRE, $parent_room_id = 0 ) {
         global $wpdb;
         $name = trim( (string) $name );
         if ( '' === $name ) {
@@ -27,6 +28,8 @@ class CB_Rooms {
 
         $table       = CB_Install::rooms_table();
         $external_id = sanitize_text_field( (string) $external_id );
+        $room_type   = in_array( $room_type, array( self::TYPE_HIRE, self::TYPE_ADDITIONAL ), true ) ? $room_type : self::TYPE_HIRE;
+        $parent      = ( self::TYPE_ADDITIONAL === $room_type && (int) $parent_room_id > 0 ) ? (int) $parent_room_id : null;
 
         if ( '' !== $external_id ) {
             $existing = $wpdb->get_row(
@@ -55,8 +58,8 @@ class CB_Rooms {
             array(
                 'external_id'    => $external_id,
                 'name'           => $name,
-                'room_type'      => self::TYPE_HIRE,
-                'parent_room_id' => null,
+                'room_type'      => $room_type,
+                'parent_room_id' => $parent,
                 'price_per_hour' => 0,
                 'created_at'     => current_time( 'mysql' ),
             ),

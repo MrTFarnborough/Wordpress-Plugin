@@ -23,6 +23,7 @@ require_once CHURCH_BOOKING_PATH . 'includes/class-cb-settings.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-rooms.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-bookings.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-slots.php';
+require_once CHURCH_BOOKING_PATH . 'includes/class-cb-churchsuite.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-admin.php';
 require_once CHURCH_BOOKING_PATH . 'includes/class-cb-frontend.php';
 

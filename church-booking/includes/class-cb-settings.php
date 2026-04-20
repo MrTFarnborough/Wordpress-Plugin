@@ -23,7 +23,7 @@ class CB_Settings {
             ),
             'notification_email' => get_option( 'admin_email' ),
             'require_approval'   => 0,
-            'church_feed_url'    => '',
+            'church_feed_url'    => 'https://kingshope.church/bookings',
         );
     }
 
